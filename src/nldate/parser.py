@@ -2,30 +2,81 @@ from datetime import date, timedelta
 import re
 
 MONTH_NAMES = {
-    "january": 1, "february": 2, "march": 3, "april": 4,
-    "may": 5, "june": 6, "july": 7, "august": 8,
-    "september": 9, "october": 10, "november": 11, "december": 12,
+    "january": 1,
+    "february": 2,
+    "march": 3,
+    "april": 4,
+    "may": 5,
+    "june": 6,
+    "july": 7,
+    "august": 8,
+    "september": 9,
+    "october": 10,
+    "november": 11,
+    "december": 12,
 }
 
 NUMBER_WORDS = {
-    "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4,
-    "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
-    "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13,
-    "fourteen": 14, "fifteen": 15, "sixteen": 16, "seventeen": 17,
-    "eighteen": 18, "nineteen": 19, "twenty": 20,
-    "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60,
-    "seventy": 70, "eighty": 80, "ninety": 90,
-    "a": 1, "an": 1,
+    "zero": 0,
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+    "eleven": 11,
+    "twelve": 12,
+    "thirteen": 13,
+    "fourteen": 14,
+    "fifteen": 15,
+    "sixteen": 16,
+    "seventeen": 17,
+    "eighteen": 18,
+    "nineteen": 19,
+    "twenty": 20,
+    "thirty": 30,
+    "forty": 40,
+    "fifty": 50,
+    "sixty": 60,
+    "seventy": 70,
+    "eighty": 80,
+    "ninety": 90,
+    "a": 1,
+    "an": 1,
 }
 
 ORDINAL_WORDS = {
-    "first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5,
-    "sixth": 6, "seventh": 7, "eighth": 8, "ninth": 9, "tenth": 10,
-    "eleventh": 11, "twelfth": 12, "thirteenth": 13, "fourteenth": 14,
-    "fifteenth": 15, "sixteenth": 16, "seventeenth": 17, "eighteenth": 18,
-    "nineteenth": 19, "twentieth": 20,
-    "thirtieth": 30, "fortieth": 40, "fiftieth": 50, "sixtieth": 60,
-    "seventieth": 70, "eightieth": 80, "ninetieth": 90,
+    "first": 1,
+    "second": 2,
+    "third": 3,
+    "fourth": 4,
+    "fifth": 5,
+    "sixth": 6,
+    "seventh": 7,
+    "eighth": 8,
+    "ninth": 9,
+    "tenth": 10,
+    "eleventh": 11,
+    "twelfth": 12,
+    "thirteenth": 13,
+    "fourteenth": 14,
+    "fifteenth": 15,
+    "sixteenth": 16,
+    "seventeenth": 17,
+    "eighteenth": 18,
+    "nineteenth": 19,
+    "twentieth": 20,
+    "thirtieth": 30,
+    "fortieth": 40,
+    "fiftieth": 50,
+    "sixtieth": 60,
+    "seventieth": 70,
+    "eightieth": 80,
+    "ninetieth": 90,
     "hundredth": 100,
 }
 
@@ -97,7 +148,8 @@ _MONTH_PAT = "|".join(MONTH_NAMES.keys())
 
 
 _MONTH_DAY_RE = re.compile(
-    rf"({'|'.join(MONTH_NAMES.keys())})\s+(\w+)", re.IGNORECASE,
+    rf"({'|'.join(MONTH_NAMES.keys())})\s+(\w+)",
+    re.IGNORECASE,
 )
 
 
@@ -105,7 +157,11 @@ def _has_invalid_refs(text: str, context_year: int) -> bool:
     for m in _MONTH_DAY_RE.finditer(text.lower().strip()):
         month_num = MONTH_NAMES[m.group(1)]
         day = _word_to_number(m.group(2))
-        if day is not None and day <= 31 and not _is_valid_date(context_year, month_num, day):
+        if (
+            day is not None
+            and day <= 31
+            and not _is_valid_date(context_year, month_num, day)
+        ):
             return True
     return False
 
@@ -125,7 +181,11 @@ def _parse_date_from_text(text: str) -> date | None:
         month_num = MONTH_NAMES[m.group(2)]
         year_in_century = _word_to_number(m.group(3))
         century_num = _word_to_number(m.group(4))
-        if day_num is not None and year_in_century is not None and century_num is not None:
+        if (
+            day_num is not None
+            and year_in_century is not None
+            and century_num is not None
+        ):
             year = (century_num - 1) * 100 + year_in_century
             if _is_valid_date(year, month_num, day_num):
                 if not _has_invalid_refs(text, year):
@@ -156,6 +216,15 @@ def _parse_date_from_text(text: str) -> date | None:
         if day_num is not None and _is_valid_date(year, month_num, day_num):
             if not _has_invalid_refs(text, year):
                 return date(year, month_num, day_num)
+
+    m = re.search(r"(\d{4})/(\d{1,2})/(\d{1,2})", text)
+    if m:
+        year = int(m.group(1))
+        month = int(m.group(2))
+        day = int(m.group(3))
+        if 1 <= month <= 12 and _is_valid_date(year, month, day):
+            if not _has_invalid_refs(text, year):
+                return date(year, month, day)
 
     m = re.search(r"(\d{1,2})/(\d{1,2})/(\d{2,4})", text)
     if m:

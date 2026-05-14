@@ -133,6 +133,15 @@ def _add_months(d: date, months: int) -> date:
     return date(year, month, min(d.day, max_day))
 
 
+def _add_years(d: date, years: int) -> date:
+    year = d.year + years
+    try:
+        return date(year, d.month, d.day)
+    except ValueError:
+        _, max_day = monthrange(year, d.month)
+        return date(year, d.month, max_day)
+
+
 def _parse_number_phrase(text: str) -> int | None:
     words = text.strip().lower().split()
     total = 0
@@ -359,6 +368,33 @@ def _parse_relative(text: str, today: date) -> date | None:
         num = _word_to_number(m.group(1).strip())
         if num is not None:
             return _add_months(today, -num)
+
+    m = re.search(r"\bin\b\s+(.+?)\s+years?\s+from\s+(.+)", lower)
+    if m:
+        num = _word_to_number(m.group(1).strip())
+        base = _resolve_date(m.group(2).strip(), today)
+        if num is not None and base is not None:
+            return _add_years(base, num)
+
+    m = re.search(r"^in\b\s+(.+?)\s+years?$", lower)
+    if m:
+        num = _word_to_number(m.group(1).strip())
+        if num is not None:
+            return _add_years(today, num)
+
+    for direction, sign in [("before", -1), ("after", 1), ("from", 1)]:
+        m = re.search(rf"(.+?)\s+years?\s+{direction}\s+(.+)", lower)
+        if m:
+            num = _word_to_number(m.group(1).strip())
+            base = _resolve_date(m.group(2).strip(), today)
+            if num is not None and base is not None:
+                return _add_years(base, num * sign)
+
+    m = re.search(r"(.+?)\s+years?\s+ago", lower)
+    if m:
+        num = _word_to_number(m.group(1).strip())
+        if num is not None:
+            return _add_years(today, -num)
 
     m = re.search(r"\bin\b\s+(.+?)\s+from\s+(.+)", lower)
     if m:

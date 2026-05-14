@@ -5,13 +5,31 @@ import pytest
 
 
 def test_relative_today():
-    relative_refs = ["5 days before now", "15 days before today", "In a week from now"]
+    relative_refs = [
+        "5 days before now",
+        "15 days before today",
+        "In a week from now",
+        "in 1 month",
+        "in 1 year",
+    ]
     actual_date = [
         date(2024, 12, 20),
         date.today() - timedelta(days=15),
         date(2025, 1, 1),
+        date(
+            date.today().year + (date.today().month // 12),
+            date.today().month % 12 + 1,
+            date.today().day,
+        ),
+        date(date.today().year + 1, date.today().month, date.today().day),
     ]
-    today = [date(2024, 12, 25), None, date(2024, 12, 25)]
+    today = [
+        date(2024, 12, 25),
+        None,
+        date(2024, 12, 25),
+        None,
+        None,
+    ]
     for i in range(len(relative_refs)):
         assert parse(relative_refs[i], today[i]) == actual_date[i]
 

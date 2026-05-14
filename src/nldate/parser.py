@@ -321,6 +321,8 @@ def _parse_relative(text: str, today: date) -> date | None:
         return today - timedelta(days=1)
     if lower == "tomorrow":
         return today + timedelta(days=1)
+    if lower in ("now", "today"):
+        return today
 
     m = re.search(r"\bin\b\s+(.+?)\s+from\s+(.+)", lower)
     if m:

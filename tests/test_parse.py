@@ -50,7 +50,8 @@ def test_exact_noref():
         "Does the twenty fifth of april 2007 work?",
         "Does 2025/12/04 work",
         "how does 12-31-2020 sound",
-        "Dec 1, 2025"
+        "Dec 1, 2025",
+        "Dec. 2, 2025",
     ]
     actual_date = [
         date(1997, 6, 3),
@@ -59,7 +60,8 @@ def test_exact_noref():
         date(2007, 4, 25),
         date(2025, 12, 4),
         date(2020, 12, 31),
-        date(2025, 12, 1)
+        date(2025, 12, 1),
+        date(2025, 12, 2),
     ]
     for i in range(len(relative_refs)):
         assert parse(relative_refs[i]) == actual_date[i]
@@ -124,3 +126,72 @@ def test_invalid_leap_dates():
     for ref in invalid_refs:
         with pytest.raises(ValueError):
             parse(ref)
+
+
+def test_abbreviated_month_period():
+    refs = ["Jan. 15, 2024", "Feb. 29, 2024", "Dec. 1, 2025"]
+    actual = [date(2024, 1, 15), date(2024, 2, 29), date(2025, 12, 1)]
+    for i in range(len(refs)):
+        assert parse(refs[i]) == actual[i]
+
+
+def test_invalid_abbreviated_month():
+    with pytest.raises(ValueError):
+        parse("Mar. 32, 2023")
+
+
+def test_relative_abbreviated():
+    assert parse("3 days before Jan. 15, 2024") == date(2024, 1, 12)
+
+
+def test_ordinal_suffix():
+    refs = ["March 3rd, 2016", "April 1st, 2020", "May 22nd, 2021", "June 11th, 2022"]
+    actual = [date(2016, 3, 3), date(2020, 4, 1), date(2021, 5, 22), date(2022, 6, 11)]
+    for i in range(len(refs)):
+        assert parse(refs[i]) == actual[i]
+
+
+def test_the_x_of_month_abbreviated():
+    refs = ["the 5th of Jan, 2024", "the 1st of Feb., 2025"]
+    actual = [date(2024, 1, 5), date(2025, 2, 1)]
+    for i in range(len(refs)):
+        assert parse(refs[i]) == actual[i]
+
+
+def test_in_days():
+    assert parse("in 3 days") == date.today() + timedelta(days=3)
+
+
+def test_days_ago():
+    assert parse("3 days ago") == date.today() - timedelta(days=3)
+
+
+def test_yesterday_tomorrow():
+    assert parse("yesterday") == date.today() - timedelta(days=1)
+    assert parse("tomorrow") == date.today() + timedelta(days=1)
+
+
+def test_no_date_info():
+    with pytest.raises(ValueError):
+        parse("")
+    with pytest.raises(ValueError):
+        parse("no date here")
+
+
+def test_zero_offset():
+    assert parse("0 days from now") == date.today()
+
+
+def test_multiple_dates():
+    assert parse("Jan 1, 2024 and Feb 2, 2024") == date(2024, 1, 1)
+
+
+def test_dd_mon_yyyy():
+    refs = ["15-Jan-2024", "15 Jan 2024", "15xJan.2024"]
+    actual = [date(2024, 1, 15), date(2024, 1, 15), date(2024, 1, 15)]
+    for i in range(len(refs)):
+        assert parse(refs[i]) == actual[i]
+
+
+def test_whitespace():
+    assert parse("  March 3, 2016  ") == date(2016, 3, 3)

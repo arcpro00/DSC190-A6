@@ -203,7 +203,7 @@ def _parse_date_from_text(text: str) -> date | None:
                     return date(year, month_num, day_num)
 
     m = re.search(
-        rf"the\s+(.+?)\s+of\s+({_MONTH_PAT})\s+(\d{{4}})",
+        rf"the\s+(.+?)\s+of\s+({_MONTH_PAT})\.?\s*,?\s*(\d{{4}})",
         lower,
     )
     if m:
@@ -216,7 +216,7 @@ def _parse_date_from_text(text: str) -> date | None:
                 return date(year, month_num, day)
 
     m = re.search(
-        rf"({_MONTH_PAT})\s+(\w+),?\s*(\d{{4}})",
+        rf"({_MONTH_PAT})\.?\s+(\w+),?\s*(\d{{4}})",
         lower,
     )
     if m:
@@ -264,6 +264,42 @@ def _parse_date_from_text(text: str) -> date | None:
             if not _has_invalid_refs(text, year):
                 return date(year, month, day)
 
+    m = re.search(
+        rf"(\d{{1,2}})-({_MONTH_PAT})\.?-(\d{{4}})",
+        lower,
+    )
+    if m:
+        day = int(m.group(1))
+        month_num = MONTH_NAMES[m.group(2)]
+        year = int(m.group(3))
+        if _is_valid_date(year, month_num, day):
+            if not _has_invalid_refs(text, year):
+                return date(year, month_num, day)
+
+    m = re.search(
+        rf"(\d{{1,2}})\s+({_MONTH_PAT})\.?\s+(\d{{4}})",
+        lower,
+    )
+    if m:
+        day = int(m.group(1))
+        month_num = MONTH_NAMES[m.group(2)]
+        year = int(m.group(3))
+        if _is_valid_date(year, month_num, day):
+            if not _has_invalid_refs(text, year):
+                return date(year, month_num, day)
+
+    m = re.search(
+        rf"(\d{{1,2}})x({_MONTH_PAT})\.(\d{{4}})",
+        lower,
+    )
+    if m:
+        day = int(m.group(1))
+        month_num = MONTH_NAMES[m.group(2)]
+        year = int(m.group(3))
+        if _is_valid_date(year, month_num, day):
+            if not _has_invalid_refs(text, year):
+                return date(year, month_num, day)
+
     return None
 
 
@@ -271,11 +307,20 @@ def _resolve_date(date_text: str, today: date) -> date | None:
     lower = date_text.strip().lower()
     if lower in ("now", "today"):
         return today
+    if lower == "yesterday":
+        return today - timedelta(days=1)
+    if lower == "tomorrow":
+        return today + timedelta(days=1)
     return _parse_date_from_text(date_text)
 
 
 def _parse_relative(text: str, today: date) -> date | None:
     lower = text.strip().lower()
+
+    if lower == "yesterday":
+        return today - timedelta(days=1)
+    if lower == "tomorrow":
+        return today + timedelta(days=1)
 
     m = re.search(r"\bin\b\s+(.+?)\s+from\s+(.+)", lower)
     if m:
@@ -285,6 +330,11 @@ def _parse_relative(text: str, today: date) -> date | None:
         base = _resolve_date(date_text, today)
         if base is not None:
             return base + timedelta(days=offset)
+
+    m = re.search(r"^in\b\s+(.+)$", lower)
+    if m:
+        offset = _parse_offset_expression(m.group(1).strip())
+        return today + timedelta(days=offset)
 
     for direction, sign in [("before", -1), ("after", 1), ("from", 1)]:
         m = re.search(rf"(.+?)\s+(days?|weeks?)\s+{direction}\s+(.+)", lower)
@@ -299,6 +349,13 @@ def _parse_relative(text: str, today: date) -> date | None:
                 base = _resolve_date(date_text, today)
                 if base is not None:
                     return base + timedelta(days=offset)
+
+    m = re.search(r"(.+?)\s+(days?|weeks?)\s+ago", lower)
+    if m:
+        num = _word_to_number(m.group(1).strip())
+        if num is not None:
+            multiplier = 7 if m.group(2).startswith("week") else 1
+            return today - timedelta(days=num * multiplier)
 
     return None
 

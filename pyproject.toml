@@ -1,10 +1,17 @@
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "dsc190-a6"
+name = "nldate"
 version = "0.1.0"
-description = "Add your description here"
+description = "Natural language date parser"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

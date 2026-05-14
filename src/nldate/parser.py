@@ -28,6 +28,23 @@ MONTH_NAMES = {
     "dec": 12,
 }
 
+DAY_NAMES = {
+    "monday": 0,
+    "tuesday": 1,
+    "wednesday": 2,
+    "thursday": 3,
+    "friday": 4,
+    "saturday": 5,
+    "sunday": 6,
+    "mon": 0,
+    "tue": 1,
+    "wed": 2,
+    "thu": 3,
+    "fri": 4,
+    "sat": 5,
+    "sun": 6,
+}
+
 NUMBER_WORDS = {
     "zero": 0,
     "one": 1,
@@ -140,6 +157,20 @@ def _add_years(d: date, years: int) -> date:
     except ValueError:
         _, max_day = monthrange(year, d.month)
         return date(year, d.month, max_day)
+
+
+def _next_weekday(today: date, target_weekday: int) -> date:
+    days_ahead = target_weekday - today.weekday()
+    if days_ahead <= 0:
+        days_ahead += 7
+    return today + timedelta(days=days_ahead)
+
+
+def _prev_weekday(today: date, target_weekday: int) -> date:
+    days_behind = today.weekday() - target_weekday
+    if days_behind < 0:
+        days_behind += 7
+    return today - timedelta(days=days_behind)
 
 
 def _parse_number_phrase(text: str) -> int | None:
@@ -341,6 +372,16 @@ def _parse_relative(text: str, today: date) -> date | None:
         return today + timedelta(days=1)
     if lower in ("now", "today"):
         return today
+
+    _DAY_PAT = "|".join(DAY_NAMES.keys())
+
+    m = re.search(rf"^next\s+({_DAY_PAT})$", lower)
+    if m:
+        return _next_weekday(today, DAY_NAMES[m.group(1)])
+
+    m = re.search(rf"^last\s+({_DAY_PAT})$", lower)
+    if m:
+        return _prev_weekday(today, DAY_NAMES[m.group(1)])
 
     m = re.search(r"\bin\b\s+(.+?)\s+months?\s+from\s+(.+)", lower)
     if m:

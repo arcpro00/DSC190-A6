@@ -213,3 +213,17 @@ def test_dd_mon_yyyy():
 
 def test_whitespace():
     assert parse("  March 3, 2016  ") == date(2016, 3, 3)
+
+
+def test_next_weekday():
+    ref_today = date(2026, 5, 13)
+    assert parse("next Tuesday", ref_today) == date(2026, 5, 19)
+    assert parse("next Monday", ref_today) == date(2026, 5, 18)
+    assert parse("next Friday", ref_today) == date(2026, 5, 15)
+
+
+def test_last_weekday():
+    ref_today = date(2026, 5, 13)
+    assert parse("last Tuesday", ref_today) == date(2026, 5, 12)
+    assert parse("last Monday", ref_today) == date(2026, 5, 11)
+    assert parse("last Sunday", ref_today) == date(2026, 5, 10)

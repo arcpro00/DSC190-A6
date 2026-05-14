@@ -50,6 +50,7 @@ def test_exact_noref():
         "Does the twenty fifth of april 2007 work?",
         "Does 2025/12/04 work",
         "how does 12-31-2020 sound",
+        "Dec 1, 2025"
     ]
     actual_date = [
         date(1997, 6, 3),
@@ -58,6 +59,7 @@ def test_exact_noref():
         date(2007, 4, 25),
         date(2025, 12, 4),
         date(2020, 12, 31),
+        date(2025, 12, 1)
     ]
     for i in range(len(relative_refs)):
         assert parse(relative_refs[i]) == actual_date[i]

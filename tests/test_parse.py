@@ -1,6 +1,6 @@
 #Options of parameters: with string(specific date, relative date) and reference date; with string, no reference date
 from datetime import date, timedelta
-from nldate import parse
+from nldate.parser import parse
 import pytest
 
 def test_relative_today():

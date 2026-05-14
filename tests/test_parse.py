@@ -232,3 +232,10 @@ def test_last_weekday():
 def test_composite_offset():
     assert parse("2 years, 3 months before Dec. 1, 2025") == date(2023, 9, 1)
     assert parse("1 year 2 months before Dec 1, 2025") == date(2024, 10, 1)
+
+
+def test_double_relative():
+    assert parse("the day after tomorrow") == date.today() + timedelta(days=2)
+    assert parse("the day before tomorrow") == date.today()
+    assert parse("a week after yesterday") == date.today() + timedelta(days=6)
+    assert parse("a week from tomorrow") == date.today() + timedelta(days=8)

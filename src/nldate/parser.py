@@ -76,6 +76,7 @@ NUMBER_WORDS = {
     "ninety": 90,
     "a": 1,
     "an": 1,
+    "the": 1,
 }
 
 ORDINAL_WORDS = {

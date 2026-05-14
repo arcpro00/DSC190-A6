@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from calendar import monthrange
 import re
 
 MONTH_NAMES = {
@@ -122,6 +123,14 @@ def _is_valid_date(y: int, m: int, d: int) -> bool:
         return True
     except (ValueError, OverflowError):
         return False
+
+
+def _add_months(d: date, months: int) -> date:
+    total = d.month - 1 + months
+    year = d.year + total // 12
+    month = total % 12 + 1
+    _, max_day = monthrange(year, month)
+    return date(year, month, min(d.day, max_day))
 
 
 def _parse_number_phrase(text: str) -> int | None:
@@ -323,6 +332,33 @@ def _parse_relative(text: str, today: date) -> date | None:
         return today + timedelta(days=1)
     if lower in ("now", "today"):
         return today
+
+    m = re.search(r"\bin\b\s+(.+?)\s+months?\s+from\s+(.+)", lower)
+    if m:
+        num = _word_to_number(m.group(1).strip())
+        base = _resolve_date(m.group(2).strip(), today)
+        if num is not None and base is not None:
+            return _add_months(base, num)
+
+    m = re.search(r"^in\b\s+(.+?)\s+months?$", lower)
+    if m:
+        num = _word_to_number(m.group(1).strip())
+        if num is not None:
+            return _add_months(today, num)
+
+    for direction, sign in [("before", -1), ("after", 1), ("from", 1)]:
+        m = re.search(rf"(.+?)\s+months?\s+{direction}\s+(.+)", lower)
+        if m:
+            num = _word_to_number(m.group(1).strip())
+            base = _resolve_date(m.group(2).strip(), today)
+            if num is not None and base is not None:
+                return _add_months(base, num * sign)
+
+    m = re.search(r"(.+?)\s+months?\s+ago", lower)
+    if m:
+        num = _word_to_number(m.group(1).strip())
+        if num is not None:
+            return _add_months(today, -num)
 
     m = re.search(r"\bin\b\s+(.+?)\s+from\s+(.+)", lower)
     if m:

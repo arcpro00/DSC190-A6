@@ -227,3 +227,8 @@ def test_last_weekday():
     assert parse("last Tuesday", ref_today) == date(2026, 5, 12)
     assert parse("last Monday", ref_today) == date(2026, 5, 11)
     assert parse("last Sunday", ref_today) == date(2026, 5, 10)
+
+
+def test_composite_offset():
+    assert parse("2 years, 3 months before Dec. 1, 2025") == date(2023, 9, 1)
+    assert parse("1 year 2 months before Dec 1, 2025") == date(2024, 10, 1)

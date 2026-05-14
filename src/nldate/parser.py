@@ -173,6 +173,26 @@ def _prev_weekday(today: date, target_weekday: int) -> date:
     return today - timedelta(days=days_behind)
 
 
+def _parse_composite_offset(text: str) -> tuple[int | None, int | None, int | None]:
+    text = text.strip().lower()
+    years: int | None = None
+    months: int | None = None
+    days: int | None = None
+    for m in re.finditer(r"([\w-]+)\s+(years?|months?|weeks?|days?)", text):
+        n = _word_to_number(m.group(1))
+        unit = m.group(2)
+        if n is not None:
+            if unit.startswith("year"):
+                years = (years or 0) + n
+            elif unit.startswith("month"):
+                months = (months or 0) + n
+            elif unit.startswith("week"):
+                days = (days or 0) + n * 7
+            elif unit.startswith("day"):
+                days = (days or 0) + n
+    return years, months, days
+
+
 def _parse_number_phrase(text: str) -> int | None:
     words = text.strip().lower().split()
     total = 0
@@ -383,94 +403,62 @@ def _parse_relative(text: str, today: date) -> date | None:
     if m:
         return _prev_weekday(today, DAY_NAMES[m.group(1)])
 
-    m = re.search(r"\bin\b\s+(.+?)\s+months?\s+from\s+(.+)", lower)
-    if m:
-        num = _word_to_number(m.group(1).strip())
-        base = _resolve_date(m.group(2).strip(), today)
-        if num is not None and base is not None:
-            return _add_months(base, num)
-
-    m = re.search(r"^in\b\s+(.+?)\s+months?$", lower)
-    if m:
-        num = _word_to_number(m.group(1).strip())
-        if num is not None:
-            return _add_months(today, num)
-
-    for direction, sign in [("before", -1), ("after", 1), ("from", 1)]:
-        m = re.search(rf"(.+?)\s+months?\s+{direction}\s+(.+)", lower)
-        if m:
-            num = _word_to_number(m.group(1).strip())
-            base = _resolve_date(m.group(2).strip(), today)
-            if num is not None and base is not None:
-                return _add_months(base, num * sign)
-
-    m = re.search(r"(.+?)\s+months?\s+ago", lower)
-    if m:
-        num = _word_to_number(m.group(1).strip())
-        if num is not None:
-            return _add_months(today, -num)
-
-    m = re.search(r"\bin\b\s+(.+?)\s+years?\s+from\s+(.+)", lower)
-    if m:
-        num = _word_to_number(m.group(1).strip())
-        base = _resolve_date(m.group(2).strip(), today)
-        if num is not None and base is not None:
-            return _add_years(base, num)
-
-    m = re.search(r"^in\b\s+(.+?)\s+years?$", lower)
-    if m:
-        num = _word_to_number(m.group(1).strip())
-        if num is not None:
-            return _add_years(today, num)
-
-    for direction, sign in [("before", -1), ("after", 1), ("from", 1)]:
-        m = re.search(rf"(.+?)\s+years?\s+{direction}\s+(.+)", lower)
-        if m:
-            num = _word_to_number(m.group(1).strip())
-            base = _resolve_date(m.group(2).strip(), today)
-            if num is not None and base is not None:
-                return _add_years(base, num * sign)
-
-    m = re.search(r"(.+?)\s+years?\s+ago", lower)
-    if m:
-        num = _word_to_number(m.group(1).strip())
-        if num is not None:
-            return _add_years(today, -num)
-
     m = re.search(r"\bin\b\s+(.+?)\s+from\s+(.+)", lower)
     if m:
-        offset_text = m.group(1).strip()
-        date_text = m.group(2).strip()
-        offset = _parse_offset_expression(offset_text)
-        base = _resolve_date(date_text, today)
-        if base is not None:
-            return base + timedelta(days=offset)
+        years, months, days = _parse_composite_offset(m.group(1))
+        if years is not None or months is not None or days is not None:
+            base = _resolve_date(m.group(2).strip(), today)
+            if base is not None:
+                result = base
+                if years is not None:
+                    result = _add_years(result, years)
+                if months is not None:
+                    result = _add_months(result, months)
+                if days is not None:
+                    result += timedelta(days=days)
+                return result
 
     m = re.search(r"^in\b\s+(.+)$", lower)
     if m:
-        offset = _parse_offset_expression(m.group(1).strip())
-        return today + timedelta(days=offset)
+        years, months, days = _parse_composite_offset(m.group(1))
+        if years is not None or months is not None or days is not None:
+            result = today
+            if years is not None:
+                result = _add_years(result, years)
+            if months is not None:
+                result = _add_months(result, months)
+            if days is not None:
+                result += timedelta(days=days)
+            return result
 
     for direction, sign in [("before", -1), ("after", 1), ("from", 1)]:
-        m = re.search(rf"(.+?)\s+(days?|weeks?)\s+{direction}\s+(.+)", lower)
+        m = re.search(rf"(.+?)\s+{direction}\s+(.+)", lower)
         if m:
-            num_text = m.group(1).strip()
-            unit = m.group(2)
-            date_text = m.group(3).strip()
-            num = _word_to_number(num_text)
-            if num is not None:
-                multiplier = 7 if unit.startswith("week") else 1
-                offset = num * multiplier * sign
-                base = _resolve_date(date_text, today)
+            years, months, days = _parse_composite_offset(m.group(1))
+            if years is not None or months is not None or days is not None:
+                base = _resolve_date(m.group(2).strip(), today)
                 if base is not None:
-                    return base + timedelta(days=offset)
+                    result = base
+                    if years is not None:
+                        result = _add_years(result, years * sign)
+                    if months is not None:
+                        result = _add_months(result, months * sign)
+                    if days is not None:
+                        result += timedelta(days=days * sign)
+                    return result
 
-    m = re.search(r"(.+?)\s+(days?|weeks?)\s+ago", lower)
+    m = re.search(r"(.+?)\s+ago", lower)
     if m:
-        num = _word_to_number(m.group(1).strip())
-        if num is not None:
-            multiplier = 7 if m.group(2).startswith("week") else 1
-            return today - timedelta(days=num * multiplier)
+        years, months, days = _parse_composite_offset(m.group(1))
+        if years is not None or months is not None or days is not None:
+            result = today
+            if years is not None:
+                result = _add_years(result, -years)
+            if months is not None:
+                result = _add_months(result, -months)
+            if days is not None:
+                result -= timedelta(days=days)
+            return result
 
     return None
 
